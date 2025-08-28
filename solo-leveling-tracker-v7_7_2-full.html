@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Solo Leveling Tracker v7.7.2</title>
+<style>
+body{background:#111;color:#eee;font-family:Arial,Helvetica,sans-serif;margin:0;padding:0;}
+header{display:flex;align-items:center;justify-content:space-between;padding:10px;background:#222;box-shadow:0 2px 5px #000;}
+header h1{font-size:18px;margin:0;}
+header .version{font-size:12px;color:#7bffc7;margin-left:5px;}
+button,select,input{background:#333;color:#eee;border:1px solid #555;border-radius:4px;padding:4px 8px;margin:2px;}
+section{padding:10px;}
+.card{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;margin-bottom:10px;box-shadow:0 2px 4px #000;}
+.flex{display:flex;flex-wrap:wrap;}
+.chip{display:inline-block;background:#333;padding:2px 6px;border-radius:12px;margin-right:5px;font-size:12px;}
+.progress{width:100%;background:#333;border-radius:4px;height:10px;margin-top:4px;}
+.progress div{height:100%;background:#7bffc7;border-radius:4px;}
+#log{max-height:150px;overflow:auto;font-size:12px;background:#000;padding:5px;border-radius:4px;}
+#activityLog{max-height:200px;overflow:auto;font-size:12px;}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #333;padding:4px;font-size:12px;}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);}
+.modal .content{background:#1a1a1a;padding:20px;border-radius:8px;max-height:90%;overflow:auto;min-width:300px;}
+.hide{display:none;}
+</style>
+</head>
+<body>
+<header>
+<h1>Solo Leveling Tracker <span class="version">v7.7.2</span></h1>
+<div>
+<button id="addProfile">+ Add Profile</button>
+<select id="profileSelect"></select>
+<button id="exportBtn">Export JSON</button>
+<input type="file" id="importFile" class="hide"/>
+<button id="importBtn">Import JSON</button>
+<button id="shopBtn">🛒 Shop</button>
+<button id="battleBtn">⚔️ Battle</button>
+<button id="avatarBtn">🧬 Avatar</button>
+<button id="resetAll">Reset All</button>
+</div>
+</header>
+<section id="playerPanel" class="card">
+<div>
+<input id="handle" placeholder="Handle"/> <span class="chip" id="hpChip">HP 0/0</span><span class="chip" id="coinChip">Coins 0</span><span class="chip" id="chargeChip">Charge 0%</span>
+</div>
+<div id="statsChips" class="chip"></div>
+<div>
+<button class="hpAction" data-delta="-5">Junk Food -5</button>
+<button class="hpAction" data-delta="-10">±200 cals -10</button>
+<button class="hpAction" data-delta="-20">Missed Protein -20</button>
+<button class="hpAction" data-delta="-20">Doom Scroll -20</button>
+<button class="hpAction" data-delta="-25">Corn -25</button>
+<button class="hpAction" data-delta="-30">Poor Sleep -30</button>
+<button class="hpAction" data-delta="10">Heal +10</button>
+<button id="fullHeal">Full Heal</button>
+</div>
+</section>
+<section class="card">
+<h3>Profile Tools</h3>
+<button id="resetLevels">Start Level 0 (keep entries)</button>
+<button id="clearEntries">Clear Entries Only</button>
+<div id="log"></div>
+</section>
+<section class="card">
+<h3>Strength Entry</h3>
+<select id="strengthCat"></select>
+<button id="addSet">+ Add set</button>
+<div id="sets"></div>
+<input id="strengthNote" placeholder="Note"/>
+<button id="logStrength">Log Strength & Gain XP</button>
+</section>
+<section class="card">
+<h3>Cardio Entry</h3>
+<select id="cardioCat"></select>
+<input id="distance" type="number" placeholder="Miles" step="0.01"/>
+<input id="duration" type="number" placeholder="Minutes"/>
+<input id="laps" type="number" placeholder="Laps"/>
+<label><input type="checkbox" id="prCheck"/> PR</label>
+<input id="cardioNote" placeholder="Note"/>
+<button id="logCardio">Log Cardio & Gain XP</button>
+</section>
+<section class="card">
+<h3>Skills</h3>
+<div id="skillsList"></div>
+<input id="newSkill" placeholder="Add Skill"/>
+</section>
+<section class="card">
+<h3>Physique</h3>
+<div id="physList"></div>
+<input id="newPhys" placeholder="Add Muscle"/>
+</section>
+<section class="card">
+<h3>Cardio</h3>
+<div id="cardioList"></div>
+<input id="newCardio" placeholder="Add Cardio"/>
+</section>
+<section class="card">
+<h3>Activity Log</h3>
+<table id="activityTable"><thead><tr><th>Date/Time</th><th>Type</th><th>Category</th><th>Delta</th><th>Note</th></tr></thead><tbody></tbody></table>
+</section>
+<section class="card">
+<h3>Leaderboard</h3>
+<table id="leaderboard"><thead><tr><th>Player</th><th>Total Level</th><th>Highlights</th></tr></thead><tbody></tbody></table>
+</section>
+<section class="card">
+<h3>Badge Collection</h3>
+<div id="badgeGrid" class="flex"></div>
+</section>
+<div id="shopModal" class="modal"><div class="content"><h3>Shop</h3><div id="shopItems"></div><button onclick="closeModal('shopModal')">Close</button></div></div>
+<div id="avatarModal" class="modal"><div class="content"><h3>Avatar</h3><div id="avatarPreview"></div><div id="avatarOptions"></div><button id="saveAvatar">Save</button><button onclick="closeModal('avatarModal')">Close</button></div></div>
+<div id="battleModal" class="modal"><div class="content"><h3>Battle</h3><div><select id="bossSelect"></select> <span id="dangerLabel"></span></div><div id="battleArena"></div><div><span class="chip" id="playerHP">HP 0</span><span class="chip" id="bossHP">Boss 0</span><span class="chip" id="battleCharge">Charge 0%</span></div><div><button id="attackBtn">Attack</button><button id="skillBtn">Skill</button><button id="defendBtn">Defend</button><button id="specialBtn" disabled>✨ Special</button></div><div id="battleLog" style="max-height:100px;overflow:auto;font-size:12px"></div><button onclick="closeModal('battleModal')">Close</button></div></div>
+<script>
+(function(){
+const STORAGE_KEY='sl_html_tracker_v7_rpg_v772';
+const defaultCats={
+ muscle:['Back','Rear Delts','Chest','Front Delts','Legs','Biceps','Forearms','Triceps','Side Delts','Hamstrings','Calves','Abs','Grip'],
+ skill:['Planche','One Arm Pushup','Handstand','Front Lever','Battle'],
+ cardio:['Running','Track Laps','Cycling','Rowing','Stairmaster']};
+const items=[
+ {id:'sw_short',name:'Short Sword',slot:'weapon',mods:{str:2},cost:50},
+ {id:'bow_light',name:'Light Bow',slot:'weapon',mods:{spd:2},cost:60},
+ {id:'wand_apprentice',name:'Apprentice Wand',slot:'weapon',mods:{mag:2},cost:60},
+ {id:'armor_light',name:'Light Armor',slot:'armor',mods:{spd:1,def:1},cost:40},
+ {id:'armor_heavy',name:'Heavy Armor',slot:'armor',mods:{def:3},cost:70},
+ {id:'boots_runner',name:'Runner Boots',slot:'boots',mods:{spd:3},cost:60},
+ {id:'ring_focus',name:'Ring of Focus',slot:'acc',mods:{mag:3},cost:75},
+ {id:'amulet_war',name:'Warrior Amulet',slot:'acc',mods:{str:3},cost:75}
+];
+const bosses=[
+ {id:'fire_dragon',name:'Fire Dragon',rec:5,hp:140,atk:[10,16]},
+ {id:'ice_golem',name:'Ice Golem',rec:8,hp:160,atk:[12,18],kit:{slow:true}},
+ {id:'thunder_titan',name:'Thunder Titan',rec:12,hp:180,atk:[14,22]},
+ {id:'shadow_mage',name:'Shadow Mage',rec:15,hp:160,atk:[12,18],kit:{dot:true}},
+ {id:'necromancer',name:'Necromancer',rec:18,hp:200,atk:[15,20],kit:{summon:true}},
+ {id:'phoenix',name:'Phoenix',rec:22,hp:170,atk:[14,20],kit:{revive:true}},
+ {id:'myth_beast',name:'Myth Beast',rec:25,hp:210,atk:[16,24],kit:{enrage:true}},
+ {id:'leviathan',name:'Leviathan',rec:28,hp:230,atk:[18,26],kit:{multihit:true}},
+ {id:'stone_coloss',name:'Stone Colossus',rec:30,hp:260,atk:[12,20],kit:{mitigate:true}},
+ {id:'demon_lord',name:'Demon Lord',rec:35,hp:300,atk:[20,28],kit:{phases:true}},
+ {id:'vampire_lord',name:'Vampire Lord',rec:40,hp:240,atk:[16,24],kit:{lifesteal:true}},
+ {id:'lich_king',name:'Lich King',rec:44,hp:260,atk:[18,26],kit:{aura:true}},
+ {id:'hydra',name:'Hydra',rec:47,hp:300,atk:[20,30],kit:{multihead:true}},
+ {id:'storm_serpent',name:'Storm Serpent',rec:50,hp:280,atk:[20,30],kit:{chain:true}},
+ {id:'volcanic_behemoth',rec:54,name:'Volcanic Behemoth',hp:320,atk:[22,32],kit:{splash:true}},
+ {id:'frost_wyrm',rec:57,name:'Frost Wyrm',hp:300,atk:[20,30],kit:{slow:true,anti_crit:true}},
+ {id:'void_reaver',rec:60,name:'Void Reaver',hp:340,atk:[24,34],kit:{phase:true,evade:true}},
+ {id:'star_devourer',rec:64,name:'Star Devourer',hp:360,atk:[26,36],kit:{gravity:true}},
+ {id:'eldritch_horror',rec:68,name:'Eldritch Horror',hp:380,atk:[28,38],kit:{madness:true}},
+ {id:'celestial_guardian',rec:72,name:'Celestial Guardian',hp:400,atk:[30,40],kit:{reflect:true}},
+ {id:'abyss_dragon',rec:78,name:'Abyss Dragon',hp:420,atk:[32,42],kit:{phases:true,enrage:true}},
+ {id:'god_of_war',rec:85,name:'God of War',hp:500,atk:[40,50],kit:{phases:true,reflect:true,evade:true}}
+];
+function xpToNext(l){return Math.floor(110*Math.pow(1.45,Math.max(l-1,0)));}
+function load(){const raw=localStorage.getItem(STORAGE_KEY);if(raw)return JSON.parse(raw);
+const profile={id:Date.now(),handle:'Player One',hp:100,max_hp:100,charge:0,stats:{},entries:[],rpg:{coins:0,base:{str:0,def:0,spd:0,mag:0},inventory:[],equipped:{weapon:null,armor:null,boots:null,acc:[]},cls:'Warrior'},avatar:{body:'#39d3ff',hair:'#e6f1ff',outfit:'#7bffc7',cape:false,mask:false,aura:false},badges:{}};
+['muscle','skill','cardio'].forEach(k=>{defaultCats[k].forEach(c=>{profile.stats[k+':'+c]={level:0,xp:0,xp_to_next:xpToNext(0),name:c,kind:k};});});
+const store={profiles:[profile],active:profile.id};save(store);return store;}
+function save(store){localStorage.setItem(STORAGE_KEY,JSON.stringify(store));}
+let store=load();
+function activeProfile(){return store.profiles.find(p=>p.id===store.active);}function updateChips(){const p=activeProfile();document.getElementById('handle').value=p.handle;document.getElementById('hpChip').textContent=`HP ${p.hp}/${p.max_hp}`;document.getElementById('coinChip').textContent=`Coins ${p.rpg.coins}`;document.getElementById('chargeChip').textContent=`Charge ${p.charge}%`;}
+function refreshProfileSelect(){const sel=document.getElementById('profileSelect');sel.innerHTML='';store.profiles.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.handle;sel.appendChild(o);});sel.value=store.active;}
+function refreshCats(){const p=activeProfile();['skill','muscle','cardio'].forEach(kind=>{const list=document.getElementById(kind==='muscle'?'physList':kind==='skill'?'skillsList':'cardioList');list.innerHTML='';Object.values(p.stats).filter(s=>s.kind===kind).forEach(s=>{const div=document.createElement('div');div.textContent=`${s.name} LVL ${s.level} (${s.xp}/${s.xp_to_next})`;const bar=document.createElement('div');bar.className='progress';const inner=document.createElement('div');inner.style.width=((s.xp/s.xp_to_next)*100)+'%';bar.appendChild(inner);div.appendChild(bar);list.appendChild(div);});const sel=document.getElementById(kind==='muscle'?'strengthCat':'cardioCat');sel.innerHTML='';Object.values(p.stats).filter(s=>s.kind===kind).forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=s.name;sel.appendChild(o);});});}
+function log(msg){const logDiv=document.getElementById('log');const d=document.createElement('div');d.textContent=new Date().toLocaleTimeString()+': '+msg;logDiv.appendChild(d);logDiv.scrollTop=logDiv.scrollHeight;}
+function addActivity(e){const tbody=document.querySelector('#activityTable tbody');const tr=document.createElement('tr');tr.innerHTML=`<td>${new Date(e.tsISO).toLocaleString()}</td><td>${e.type}</td><td>${e.categoryId}</td><td>${e.delta}</td><td>${e.note||''}</td>`;tbody.prepend(tr);}
+function updateLeaderboard(){const tbody=document.querySelector('#leaderboard tbody');tbody.innerHTML='';store.profiles.forEach(p=>{const total=Object.values(p.stats).reduce((a,b)=>a+b.level,0);const highlights=Object.values(p.stats).sort((a,b)=>b.level-a.level).slice(0,4).map(s=>s.name+' '+s.level).join(', ');const tr=document.createElement('tr');tr.innerHTML=`<td>${p.handle}</td><td>${total}</td><td>${highlights}</td>`;tbody.appendChild(tr);});}
+function updateBadges(){const grid=document.getElementById('badgeGrid');grid.innerHTML='';bosses.forEach(b=>{const div=document.createElement('div');div.style.border='1px solid #333';div.style.margin='4px';div.style.padding='4px';div.style.width='80px';div.style.textAlign='center';div.textContent=b.name; if(activeProfile().badges[b.id])div.style.background='#7bffc7';grid.appendChild(div);});}
+function saveAndRefresh(){save(store);updateChips();refreshCats();updateLeaderboard();updateBadges();}
+refreshProfileSelect();updateChips();refreshCats();updateLeaderboard();updateBadges();
+// profile events
+ document.getElementById('profileSelect').addEventListener('change',e=>{store.active=parseInt(e.target.value);saveAndRefresh();});
+ document.getElementById('addProfile').addEventListener('click',()=>{const id=Date.now();const p=JSON.parse(JSON.stringify(store.profiles[0]));p.id=id;p.handle='Player '+(store.profiles.length+1);p.entries=[];Object.values(p.stats).forEach(s=>{s.level=0;s.xp=0;s.xp_to_next=xpToNext(0);});p.rpg.coins=0;p.rpg.inventory=[];p.rpg.equipped={weapon:null,armor:null,boots:null,acc:[]};p.badges={};store.profiles.push(p);store.active=id;saveAndRefresh();refreshProfileSelect();log('Profile added');});
+ document.getElementById('handle').addEventListener('change',e=>{activeProfile().handle=e.target.value;saveAndRefresh();});
+ document.querySelectorAll('.hpAction').forEach(btn=>btn.addEventListener('click',()=>{const delta=parseInt(btn.dataset.delta);const p=activeProfile();p.hp=Math.max(0,Math.min(p.max_hp,p.hp+delta));p.entries.push({tsISO:new Date().toISOString(),type:'hp',categoryId:'hp',delta:delta,note:btn.textContent});addActivity(p.entries[p.entries.length-1]);saveAndRefresh();}));
+ document.getElementById('fullHeal').addEventListener('click',()=>{const p=activeProfile();p.hp=p.max_hp;p.entries.push({tsISO:new Date().toISOString(),type:'hp',categoryId:'hp',delta:p.max_hp,note:'Full Heal'});addActivity(p.entries[p.entries.length-1]);saveAndRefresh();});
+// strength sets
+ document.getElementById('addSet').addEventListener('click',()=>{const div=document.createElement('div');div.innerHTML='<input type="number" class="reps" placeholder="Reps"/> <input type="number" class="weight" placeholder="Weight lbs"/> <button class="rem">x</button>';document.getElementById('sets').appendChild(div);div.querySelector('.rem').onclick=()=>div.remove();});
+ function calcStrengthXP(){const sets=document.querySelectorAll('#sets div');let total=0,top=0;sets.forEach(s=>{const r=parseFloat(s.querySelector('.reps').value)||0;const w=parseFloat(s.querySelector('.weight').value)||0;const vol=r*w*0.453592;total+=vol;if(vol>top)top=vol;});const xp=Math.max(0,Math.min(300,(Math.log10(total+1)*28)+(Math.log10(top+1)*12)));return Math.round(xp);} 
+ document.getElementById('logStrength').addEventListener('click',()=>{const p=activeProfile();const cat=document.getElementById('strengthCat').value;const xp=calcStrengthXP();if(!xp){log('no xp');return;}const note=document.getElementById('strengthNote').value;const stat=p.stats['muscle:'+cat];stat.xp+=xp;let leveled=false;while(stat.xp>=stat.xp_to_next){stat.xp-=stat.xp_to_next;stat.level++;stat.xp_to_next=xpToNext(stat.level);p.rpg.coins+=5;['str','def','spd','mag'].forEach(k=>p.rpg.base[k]+=1+Math.floor(Math.random()*3));leveled=true;}
+p.entries.push({tsISO:new Date().toISOString(),type:'strength',categoryId:cat,delta:xp,note});addActivity(p.entries[p.entries.length-1]);if(leveled)log(`${cat} leveled to ${stat.level}`);saveAndRefresh();document.getElementById('sets').innerHTML='';document.getElementById('strengthNote').value='';});
+// cardio
+ function calcCardioXP(miles,minutes,pr){return Math.max(5,Math.min(320,miles*22+minutes*0.5+(pr?30:0)));}
+ document.getElementById('logCardio').addEventListener('click',()=>{const p=activeProfile();const cat=document.getElementById('cardioCat').value;let miles=parseFloat(document.getElementById('distance').value)||0;const minutes=parseFloat(document.getElementById('duration').value)||0;const laps=parseFloat(document.getElementById('laps').value)||0;if(cat==='Track Laps' && laps)miles+=laps*0.25;const xp=Math.round(calcCardioXP(miles,minutes,document.getElementById('prCheck').checked));const note=document.getElementById('cardioNote').value;const stat=p.stats['cardio:'+cat];stat.xp+=xp;let leveled=false;while(stat.xp>=stat.xp_to_next){stat.xp-=stat.xp_to_next;stat.level++;stat.xp_to_next=xpToNext(stat.level);p.rpg.coins+=5;['str','def','spd','mag'].forEach(k=>p.rpg.base[k]+=1+Math.floor(Math.random()*3));leveled=true;}
+p.entries.push({tsISO:new Date().toISOString(),type:'cardio',categoryId:cat,delta:xp,note});addActivity(p.entries[p.entries.length-1]);if(leveled)log(`${cat} leveled to ${stat.level}`);saveAndRefresh();document.getElementById('distance').value='';document.getElementById('duration').value='';document.getElementById('laps').value='';document.getElementById('prCheck').checked=false;document.getElementById('cardioNote').value='';});
+// add categories
+ document.getElementById('newSkill').addEventListener('keypress',e=>{if(e.key==='Enter'){const name=e.target.value.trim();if(!name)return;const p=activeProfile();p.stats['skill:'+name]={level:0,xp:0,xp_to_next:xpToNext(0),name,kind:'skill'};e.target.value='';saveAndRefresh();}});
+ document.getElementById('newPhys').addEventListener('keypress',e=>{if(e.key==='Enter'){const name=e.target.value.trim();if(!name)return;const p=activeProfile();p.stats['muscle:'+name]={level:0,xp:0,xp_to_next:xpToNext(0),name,kind:'muscle'};e.target.value='';saveAndRefresh();}});
+ document.getElementById('newCardio').addEventListener('keypress',e=>{if(e.key==='Enter'){const name=e.target.value.trim();if(!name)return;const p=activeProfile();p.stats['cardio:'+name]={level:0,xp:0,xp_to_next:xpToNext(0),name,kind:'cardio'};e.target.value='';saveAndRefresh();}});
+// activity log populate existing
+ activeProfile().entries.forEach(addActivity);
+// leaderboard initial already called
+// reset tools
+ document.getElementById('resetLevels').addEventListener('click',()=>{const p=activeProfile();Object.values(p.stats).forEach(s=>{s.level=0;s.xp=0;s.xp_to_next=xpToNext(0);});p.rpg.coins=0;['str','def','spd','mag'].forEach(k=>p.rpg.base[k]=0);log('Levels reset');saveAndRefresh();});
+ document.getElementById('clearEntries').addEventListener('click',()=>{const p=activeProfile();p.entries=[];document.querySelector('#activityTable tbody').innerHTML='';log('Entries cleared');saveAndRefresh();});
+ document.getElementById('resetAll').addEventListener('click',()=>{localStorage.removeItem(STORAGE_KEY);store=load();refreshProfileSelect();saveAndRefresh();log('All reset');});
+// shop
+ function openModal(id){document.getElementById(id).style.display='flex';}
+ window.closeModal=function(id){document.getElementById(id).style.display='none';};
+ document.getElementById('shopBtn').addEventListener('click',()=>{const div=document.getElementById('shopItems');div.innerHTML='';const p=activeProfile();items.forEach(it=>{const owned=p.rpg.inventory.includes(it.id);const card=document.createElement('div');card.className='card';card.innerHTML=`<b>${it.name}</b> (${it.cost}c)<br/>${owned?'Owned':'Not owned'} <button>${owned? (p.rpg.equipped[it.slot]===it.id || (it.slot==='acc' && p.rpg.equipped.acc.includes(it.id))?'Unequip':'Equip'):'Buy'}</button>`;card.querySelector('button').onclick=()=>{if(!owned){if(p.rpg.coins>=it.cost){p.rpg.coins-=it.cost;p.rpg.inventory.push(it.id);log('Bought '+it.name);}else{log('Not enough coins');}}else{if(it.slot==='acc'){const idx=p.rpg.equipped.acc.indexOf(it.id);if(idx>=0){p.rpg.equipped.acc.splice(idx,1);log('Unequipped '+it.name);}else{p.rpg.equipped.acc.push(it.id);log('Equipped '+it.name);} }else{if(p.rpg.equipped[it.slot]===it.id){p.rpg.equipped[it.slot]=null;log('Unequipped '+it.name);}else{p.rpg.equipped[it.slot]=it.id;log('Equipped '+it.name);} }};div.appendChild(card);});openModal('shopModal');saveAndRefresh();});
+// avatar (simplified)
+ document.getElementById('avatarBtn').addEventListener('click',()=>{const p=activeProfile();const prev=document.getElementById('avatarPreview');prev.innerHTML=renderAvatarSVG(p);const opt=document.getElementById('avatarOptions');opt.innerHTML='Body <input type="color" id="bodyColor" value="'+p.avatar.body+'"/> Hair <input type="color" id="hairColor" value="'+p.avatar.hair+'"/> Outfit <input type="color" id="outfitColor" value="'+p.avatar.outfit+'"/>';openModal('avatarModal');});
+ function renderAvatarSVG(p){return `<svg width="80" height="80"><circle cx="40" cy="20" r="15" fill="${p.avatar.hair}"/><circle cx="40" cy="50" r="20" fill="${p.avatar.body}"/><rect x="25" y="40" width="30" height="30" fill="${p.avatar.outfit}"/>${p.rpg.equipped.weapon==='sw_short'?'<line x1="60" y1="50" x2="75" y2="65" stroke="#ccc" stroke-width="4"/>':''}${p.rpg.equipped.weapon==='bow_light'?'<path d="M60 30 Q70 50 60 70" stroke="#ccc" stroke-width="4" fill="none"/>':''}${p.rpg.equipped.weapon==='wand_apprentice'?'<line x1="60" y1="30" x2="75" y2="45" stroke="#ccf" stroke-width="4"/>':''}</svg>`;}
+ document.getElementById('saveAvatar').addEventListener('click',()=>{const p=activeProfile();p.avatar.body=document.getElementById('bodyColor').value;p.avatar.hair=document.getElementById('hairColor').value;p.avatar.outfit=document.getElementById('outfitColor').value;document.getElementById('avatarPreview').innerHTML=renderAvatarSVG(p);saveAndRefresh();});
+// battle
+ document.getElementById('battleBtn').addEventListener('click',()=>{const sel=document.getElementById('bossSelect');sel.innerHTML='';bosses.forEach(b=>{const o=document.createElement('option');o.value=b.id;o.textContent=`${b.name} (rec ${b.rec})`;sel.appendChild(o);});openModal('battleModal');prepareBattle(sel.value);});
+ document.getElementById('bossSelect').addEventListener('change',e=>{prepareBattle(e.target.value);});
+ let battleState=null;
+ function prepareBattle(id){const p=activeProfile();const b=bosses.find(x=>x.id===id);const total=Object.values(p.stats).reduce((a,b)=>a+b.level,0);const scale=1+Math.min(1.2,(b.rec-total)/b.rec*1.2);battleState={boss:JSON.parse(JSON.stringify(b)),bossHp:Math.round(b.hp*scale),playerHp:p.hp,charge:p.charge,defend:false};document.getElementById('dangerLabel').textContent=total<b.rec?`Danger x${scale.toFixed(2)}`:'';document.getElementById('playerHP').textContent=`HP ${battleState.playerHp}`;document.getElementById('bossHP').textContent=`${b.name} ${battleState.bossHp}`;document.getElementById('battleCharge').textContent=`Charge ${battleState.charge}%`;document.getElementById('specialBtn').disabled=battleState.charge<100;document.getElementById('battleLog').innerHTML='';}
+ function applyBattleEnd(win){const p=activeProfile();p.hp=battleState.playerHp;p.charge=battleState.charge; if(win){log('Victory!');p.badges[battleState.boss.id]=true;const stat=p.stats['skill:Battle'];stat.xp+=120;while(stat.xp>=stat.xp_to_next){stat.xp-=stat.xp_to_next;stat.level++;stat.xp_to_next=xpToNext(stat.level);p.rpg.coins+=5;['str','def','spd','mag'].forEach(k=>p.rpg.base[k]+=1+Math.floor(Math.random()*3));log('Battle leveled');}} else {log('Defeat');} saveAndRefresh();}
+ function playerAttack(type){const p=activeProfile();const stats=calcRPGStats(p);let dmg=0;let acc=0.9+stats.spd*0.002;let crit=0.12+(stats.str+stats.mag)*0.001;switch(type){case'attack':dmg=stats.str*2;acc+=0;break;case'skill':dmg=stats.mag*2.5;acc+=0.05;break;case'special':dmg=(stats.str+stats.mag+stats.spd)*4;break;} if(Math.random()>acc){logBattle('Player miss');}else{if(Math.random()<crit){dmg*=1.5;logBattle('Crit!');} battleState.bossHp-=Math.round(dmg);}battleState.charge=Math.min(100,battleState.charge+(type==='attack'?12:type==='skill'?16:0));}
+ function bossAttack(){const b=battleState.boss;const atk=b.atk[0]+Math.random()*(b.atk[1]-b.atk[0]);let dmg=atk;const pStats=calcRPGStats(activeProfile());dmg-=pStats.def; if(battleState.defend)dmg/=2; if(Math.random()>0.94)logBattle('Boss miss'); else {if(Math.random()<0.16)dmg*=1.3; battleState.playerHp-=Math.max(1,Math.round(dmg));battleState.charge=Math.min(100,battleState.charge+8);} battleState.defend=false;}
+ function calcRPGStats(p){const s={str:p.rpg.base.str,def:p.rpg.base.def,spd:p.rpg.base.spd,mag:p.rpg.base.mag};function apply(mods){Object.keys(mods).forEach(k=>s[k]+=mods[k]);}if(p.rpg.equipped.weapon){apply(items.find(i=>i.id===p.rpg.equipped.weapon).mods);}if(p.rpg.equipped.armor){apply(items.find(i=>i.id===p.rpg.equipped.armor).mods);}if(p.rpg.equipped.boots){apply(items.find(i=>i.id===p.rpg.equipped.boots).mods);}p.rpg.equipped.acc.forEach(id=>apply(items.find(i=>i.id===id).mods));const totalLevel=Object.values(p.stats).reduce((a,b)=>a+b.level,0);const bonus=Math.floor(totalLevel/5);s.str+=bonus;s.def+=bonus;s.spd+=bonus;s.mag+=bonus;return s;}
+ function logBattle(msg){const div=document.getElementById('battleLog');const d=document.createElement('div');d.textContent=msg;div.appendChild(d);div.scrollTop=div.scrollHeight;}
+ document.getElementById('attackBtn').addEventListener('click',()=>{playerAttack('attack');endTurn();});
+ document.getElementById('skillBtn').addEventListener('click',()=>{playerAttack('skill');endTurn();});
+ document.getElementById('defendBtn').addEventListener('click',()=>{battleState.defend=true;logBattle('Player defends');battleState.charge=Math.min(100,battleState.charge+10);endTurn();});
+ document.getElementById('specialBtn').addEventListener('click',()=>{if(battleState.charge<100)return;playerAttack('special');battleState.charge=0;endTurn();});
+ function endTurn(){document.getElementById('specialBtn').disabled=battleState.charge<100; if(battleState.bossHp<=0){logBattle('Boss defeated');applyBattleEnd(true);return;}bossAttack();document.getElementById('playerHP').textContent=`HP ${battleState.playerHp}`;document.getElementById('bossHP').textContent=`${battleState.boss.name} ${battleState.bossHp}`;document.getElementById('battleCharge').textContent=`Charge ${battleState.charge}%`;if(battleState.playerHp<=0){logBattle('You were defeated');applyBattleEnd(false);} }
+// import/export
+ document.getElementById('exportBtn').addEventListener('click',()=>{const data=JSON.stringify(store);const blob=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='solo-leveling-export.json';a.click();});
+ document.getElementById('importBtn').addEventListener('click',()=>{document.getElementById('importFile').click();});
+ document.getElementById('importFile').addEventListener('change',e=>{const file=e.target.files[0];const reader=new FileReader();reader.onload=ev=>{try{const imported=JSON.parse(ev.target.result);imported.profiles.forEach(p=>{p.id=Date.now()+Math.random();store.profiles.push(p);});saveAndRefresh();refreshProfileSelect();log('Import ok');}catch(err){log('Import failed');}};reader.readAsText(file);});
+})();
+</script>
+</body>
+</html>
